@@ -1,7 +1,6 @@
 import base64
 import logging
 import os
-import re
 import requests
 import subprocess
 import sys
@@ -74,10 +73,10 @@ def download_faq_file():
 def get_current_invite_url(filepath):
     """获取当前的邀请链接"""
     with open(filepath, 'r') as f:
-        pattern = '请点击<.*>链接'
+        pattern = '请点击[链接](https://gitee.com/open_euler?invite='
         for line in f.readlines():
-            if re.search(pattern, line):
-                current_url = line.split('"')[1]
+            if pattern in line:
+                current_url = line.split('(')[1].split(')')[0]
                 log.logger.info('Current invitation: {}'.format(current_url))
                 return current_url
 
@@ -99,7 +98,7 @@ def get_file_sha():
     }
     r = requests.get(url, params=params)
     if r.status_code != 200:
-        log.logger.error('Fail to get sha of the FAQ file, status code: {}'.format(f.status_code))
+        log.logger.error('Fail to get sha of the FAQ file, status code: {}'.format(r.status_code))
         sys.exit(1)
     sha_value = r.json()['sha']
     return sha_value
