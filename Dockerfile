@@ -4,7 +4,7 @@ MAINTAINER liuqi<469227928@qq.com>
 
 RUN yum install -y wget python3-pip
 
-RUN pip3 install requests
+RUN pip3 install requests -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 WORKDIR /work/invite-enterprise-members
 
