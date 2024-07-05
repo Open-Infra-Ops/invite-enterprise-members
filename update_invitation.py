@@ -68,12 +68,15 @@ def download_faq_file():
     """下载FAQ file"""
     subprocess.call('test -f openEuler-Infra-FAQ.md && rm -f openEuler-Infra-FAQ.md', shell=True)
     subprocess.call('wget https://gitee.com/openeuler/infrastructure/raw/master/docs/openEuler-Infra-FAQ.md', shell=True)
+    subprocess.call('test -f openEuler-Infra-FAQ-en.md && rm -f openEuler-Infra-FAQ-en.md', shell=True)
+    subprocess.call('wget https://gitee.com/openeuler/infrastructure/raw/master/docs/openEuler-Infra-FAQ-en.md',
+                    shell=True)
 
 
 def get_current_invite_url(filepath):
     """获取当前的邀请链接"""
     with open(filepath, 'r') as f:
-        pattern = '请点击[链接](https://gitee.com/open_euler?invite='
+        pattern = '(https://gitee.com/open_euler?invite='
         for line in f.readlines():
             if pattern in line:
                 current_url = line.split('(')[1].split(')')[0]
@@ -90,9 +93,8 @@ def generate_b64code(current_url, invite_url, filepath):
     return b64code
 
 
-def get_file_sha():
+def get_file_sha(url):
     """查询目标文件哈希值"""
-    url = os.getenv('UpdateFileApiUrl', '')
     params = {
         'access_token': os.getenv('AccessToken', '')
     }
@@ -104,9 +106,8 @@ def get_file_sha():
     return sha_value
 
 
-def update_repo_file(b64code, sha_value, filepath):
+def update_repo_file(url, b64code, sha_value, filepath):
     """修改仓库中的文件"""
-    url = os.getenv('UpdateFileApiUrl', '')
     data = {
         'access_token': os.getenv('AccessToken', ''),
         'content': b64code,
@@ -133,8 +134,16 @@ def main():
         log.logger.info('Find there is no difference between current_url and invite_url, skip updating.')
         sys.exit()
     b64code = generate_b64code(current_url, invite_url, filepath)
-    sha_value = get_file_sha()
-    update_repo_file(b64code, sha_value, filepath)
+    update_file_api_url = os.getenv('UpdateFileApiUrl', '')
+    sha_value = get_file_sha(update_file_api_url)
+    update_repo_file(update_file_api_url, b64code, sha_value, filepath)
+
+    en_filepath = filepath.replace('.md', '-en.md')
+    en_current_url = get_current_invite_url(en_filepath)
+    en_b64code = generate_b64code(en_current_url, invite_url, en_filepath)
+    en_update_file_api_url = update_file_api_url.replace(filepath, en_filepath)
+    en_sha_vale = get_file_sha(en_update_file_api_url)
+    update_repo_file(en_update_file_api_url, en_b64code, en_sha_vale, en_filepath)
 
 
 if __name__ == '__main__':
