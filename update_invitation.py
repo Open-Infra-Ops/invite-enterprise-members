@@ -5,6 +5,18 @@ import requests
 import subprocess
 import sys
 from logging import handlers
+import json
+
+Config = dict()
+
+
+def load_config():
+    config_path = "/vault/secrets/config.json"
+    with open(os.path.expanduser(config_path), "r") as secret:
+        global Config
+        Config = json.load(secret)
+
+    os.remove(config_path)
 
 
 class Logger(object):
@@ -32,12 +44,11 @@ class Logger(object):
 log = Logger('update_invitation.log', level='info')
 
 
-
 def get_v8_token():
     """获取v8 token"""
-    url = os.getenv('V8URL', '')
+    url = Config.get('V8URL', '')
     params = {
-        'token': os.getenv('QUERY_TOKEN', '')
+        'token': Config.get('QUERY_TOKEN', '')
     }
     r = requests.get(url, params=params)
     if r.status_code != 200:
@@ -49,11 +60,11 @@ def get_v8_token():
 
 def get_new_invitation(access_token):
     """生成邀请链接"""
-    url = os.getenv('InviteApiUrl', '')
+    url = Config.get('InviteApiUrl', '')
     data = {
         'access_token': access_token,
-        'role_id': os.getenv('RoleId', ''),
-        'need_check': os.getenv('NeedCheck', 1)
+        'role_id': Config.get('RoleId', ''),
+        'need_check': Config.get('NeedCheck', 1)
     }
     r = requests.post(url, data=data)
     if r.status_code != 201:
@@ -67,7 +78,8 @@ def get_new_invitation(access_token):
 def download_faq_file():
     """下载FAQ file"""
     subprocess.call('test -f openEuler-Infra-FAQ.md && rm -f openEuler-Infra-FAQ.md', shell=True)
-    subprocess.call('wget https://gitee.com/openeuler/infrastructure/raw/master/docs/openEuler-Infra-FAQ.md', shell=True)
+    subprocess.call('wget https://gitee.com/openeuler/infrastructure/raw/master/docs/openEuler-Infra-FAQ.md',
+                    shell=True)
     subprocess.call('test -f openEuler-Infra-FAQ-en.md && rm -f openEuler-Infra-FAQ-en.md', shell=True)
     subprocess.call('wget https://gitee.com/openeuler/infrastructure/raw/master/docs/openEuler-Infra-FAQ-en.md',
                     shell=True)
@@ -96,7 +108,7 @@ def generate_b64code(current_url, invite_url, filepath):
 def get_file_sha(url):
     """查询目标文件哈希值"""
     params = {
-        'access_token': os.getenv('AccessToken', '')
+        'access_token': Config.get('AccessToken', '')
     }
     r = requests.get(url, params=params)
     if r.status_code != 200:
@@ -109,7 +121,7 @@ def get_file_sha(url):
 def update_repo_file(url, b64code, sha_value, filepath):
     """修改仓库中的文件"""
     data = {
-        'access_token': os.getenv('AccessToken', ''),
+        'access_token': Config.get('AccessToken', ''),
         'content': b64code,
         'sha': sha_value,
         'message': 'update {}'.format(filepath)
@@ -122,7 +134,8 @@ def update_repo_file(url, b64code, sha_value, filepath):
 
 
 def main():
-    filepath = os.getenv('FAQFilename', '')
+    load_config()
+    filepath = Config.get('FAQFilename', '')
     if not filepath:
         log.logger.error('Filepath is not exist, please check!')
         sys.exit(1)
@@ -134,7 +147,7 @@ def main():
         log.logger.info('Find there is no difference between current_url and invite_url, skip updating.')
         sys.exit()
     b64code = generate_b64code(current_url, invite_url, filepath)
-    update_file_api_url = os.getenv('UpdateFileApiUrl', '')
+    update_file_api_url = Config.get('UpdateFileApiUrl', '')
     sha_value = get_file_sha(update_file_api_url)
     update_repo_file(update_file_api_url, b64code, sha_value, filepath)
 
